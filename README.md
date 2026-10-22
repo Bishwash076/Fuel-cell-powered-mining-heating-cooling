@@ -75,19 +75,23 @@ def main():
     j=np.linspace(.025,lim,110); ts=np.linspace(323.15,373.15,95)
     J,T=np.meshgrid(j,ts)
     V=voltage(T,J); P=power(T,J); ETA=efficiency(T,J)
-    fig,axs=plt.subplots(5,2,figsize=(19,25),layout='constrained')
-    a,bx,c,e,f,g,h,k,m,n=axs.flat
-    plt.rcParams.update({'font.size':10,'axes.titlesize':11,'axes.labelsize':10})
+    plt.rcParams.update({'font.size':13,'axes.titlesize':15,'axes.labelsize':13,
+                         'xtick.labelsize':11,'ytick.labelsize':11,
+                         'legend.fontsize':11,'figure.titlesize':19})
+    fig,axs=plt.subplots(4,2,figsize=(22,23),layout='constrained')
+    # Compact row spacing while retaining readable labels.
+    fig.set_constrained_layout_pads(w_pad=0.48, h_pad=0.18, wspace=0.18, hspace=0.07)
+    a,bx,c,e,f,g,h,k=axs.flat
     # A: filled power contours with labelled isolines
     cf=a.contourf(J,T-273.15,P,45,cmap='turbo'); lines=a.contour(J,T-273.15,P,7,colors='white',linewidths=.6)
-    a.clabel(lines,fontsize=7,fmt='%.0f');fig.colorbar(cf,ax=a,label='Gross power (kW)')
+    a.clabel(lines,fontsize=10,fmt='%.0f');fig.colorbar(cf,ax=a,label='Gross power (kW)')
     a.set(title='(a) Response surface: gross power',xlabel='Current density (A/cm²)',ylabel='Temperature (°C)')
     # B: diverging percent power change vs 80 C at same current
     pref=power(T0,J); pct=100*(P-pref)/np.maximum(pref,1e-9)
     bound=max(abs(pct.min()),abs(pct.max()),.01)
     im=bx.pcolormesh(J,T-273.15,pct,cmap='coolwarm',norm=TwoSlopeNorm(vcenter=0,vmin=-bound,vmax=bound),shading='auto')
     cs=bx.contour(J,T-273.15,pct,levels=9,colors='black',linewidths=.45,alpha=.65)
-    bx.clabel(cs,fontsize=7,fmt='%.1f')
+    bx.clabel(cs,fontsize=10,fmt='%.1f')
     fig.colorbar(im,ax=bx,label='Change relative to 80°C (%)')
     bx.axhline(80,color='black',ls='--',lw=1)
     bx.set(title='(b) Temperature-induced power change',xlabel='Current density (A/cm²)',ylabel='Temperature (°C)')
@@ -95,7 +99,7 @@ def main():
     for temp in [50,60,70,80,90,100]:
         c.plot(j,power(temp+273.15,j),lw=1.9,label=f'{temp}°C')
     c.axvline(lim,color='black',ls=':',label='Feed limit')
-    c.set(title='(c) Polarization-to-power sensitivity',xlabel='Current density (A/cm²)',ylabel='Gross power (kW)');c.legend(ncol=2,fontsize=8)
+    c.set(title='(c) Polarization-to-power sensitivity',xlabel='Current density (A/cm²)',ylabel='Gross power (kW)');c.legend(ncol=2,fontsize=11)
     # E: tornado at fixed fraction of feed limit; physical feasible for every scenario
     base=float(power(T0,jb)); cases=[]
     for name,low,high in [('Temperature (°C)',323.15,373.15),('Membrane thickness (cm)',.8*THICK,1.2*THICK),('Active area (cm²)',.85*AREA,1.15*AREA),('Stacks',6,10),('H₂ utilization',.75,.95),('H₂ feed (kg/h)',25,35)]:
@@ -116,14 +120,14 @@ def main():
         e.scatter([lo,hi],[i,i],c=['#256b9e','#dc743d'],s=55,zorder=3)
     e.axvline(base,color='black',ls='--',label=f'Baseline {base:.1f} kW')
     e.set_yticks(range(len(cases)),[x[0] for x in cases]);e.invert_yaxis()
-    e.set(title='(d) Tornado: feasible one-factor-at-a-time power',xlabel='Gross power (kW)');e.legend(fontsize=8)
+    e.set(title='(d) Tornado: feasible one-factor-at-a-time power',xlabel='Gross power (kW)');e.legend(fontsize=11)
     # F: heatmap: temperature vs utilization, each point at jlimit
     us=np.linspace(.55,.98,42); t2=np.linspace(50,100,40)
     UH,TH=np.meshgrid(us,t2); JH=jlimit(util=UH)
     PM=power(TH+273.15,JH)
     im=f.pcolormesh(UH,TH,PM,cmap='turbo',shading='auto')
     cs=f.contour(UH,TH,PM,levels=9,colors='black',linewidths=.55,alpha=.7)
-    f.clabel(cs,fontsize=7,fmt='%.0f')
+    f.clabel(cs,fontsize=10,fmt='%.0f')
     fig.colorbar(im,ax=f,label='Gross power (kW)')
     f.scatter([UTIL],[80],marker='x',c='white',s=90,lw=2)
     f.set(title='(e) Coupled temperature–utilization sensitivity',xlabel='H₂ utilization (fraction)',ylabel='Temperature (°C)')
@@ -146,25 +150,17 @@ def main():
         jj=jlimit(feed=feeds,stacks=stacks)
         k.plot(feeds,power(T0,jj,stacks=stacks),label=f'{stacks} stacks',lw=1.7)
     k.axvline(H2FEED,ls='--',color='black',lw=1)
-    k.set(title='(h) Feed-limited stack scaling',xlabel='Total H₂ feed (kg/h)',ylabel='Gross power (kW)');k.legend(ncol=2,fontsize=8)
-    # K: paired heatmap of power across stack and feed design space
-    ns=np.arange(4,17,2); hf=np.linspace(15,45,45)
-    design=np.array([[power(T0,jlimit(feed=float(feed),stacks=int(st)),stacks=int(st)) for feed in hf] for st in ns])
-    im=m.imshow(design,origin='lower',aspect='auto',extent=[hf[0],hf[-1],ns[0]-1,ns[-1]+1],cmap='jet')
-    fig.colorbar(im,ax=m,label='Gross power (kW)')
-    m.contour(hf,ns,design,levels=8,colors='white',linewidths=.65,alpha=.85)
-    m.set_yticks(ns)
-    m.set(title='(i) Stack–feed design-space heatmap',xlabel='Total H₂ feed (kg/h)',ylabel='Number of stacks')
-    # L: stacked product and exhaust flows, baseline j sweep
-    jf=np.linspace(.01,lim,65)
-    flows=[balance(float(q)) for q in jf]
-    n.stackplot(jf,[[z['water'] for z in flows],[z['o2_out'] for z in flows],[z['n2_in'] for z in flows],[z['h2_out'] for z in flows]],labels=['Water produced','O₂ exhaust','N₂ exhaust','H₂ exhaust'],alpha=.88)
-    n.set(title='(j) Exhaust/product mass-flow composition',xlabel='Current density (A/cm²)',ylabel='Outlet mass flow (kg/h)');n.legend(loc='upper left',fontsize=8)
+    k.set(title='(h) Feed-limited stack scaling',xlabel='Total H₂ feed (kg/h)',ylabel='Gross power (kW)');k.legend(ncol=2,fontsize=11)
     for ax in axs.flat:
-        ax.tick_params(labelsize=9)
-        if ax not in [a,bx,f,m]:ax.grid(alpha=.15)
-    fig.suptitle('PEMFC Advanced 2D CFD-style Sensitivity | 30 kg/h H₂ feed | 8 stacks | Original supplied electrochemical relations',fontsize=15,fontweight='bold')
-    target=Path.cwd()/'PEMFC_30kgph_Advanced_2D_Sensitivity_10Panels_CFD.png'
+        ax.tick_params(labelsize=11)
+        if ax not in [a,bx,f]:ax.grid(alpha=.15)
+    fig.suptitle('PEMFC Advanced 2D CFD-style Sensitivity | 30 kg/h H₂ feed | 8 stacks | Original supplied electrochemical relations',fontsize=19,fontweight='bold')
+    # Enlarge colorbar labels and tick marks for manuscript readability.
+    for ax in fig.axes:
+        if ax not in list(axs.flat):
+            ax.tick_params(labelsize=11)
+            ax.yaxis.label.set_size(13)
+    target=Path.cwd()/'PEMFC_30kgph_Advanced_2D_Sensitivity_8Panels_CompactSpacing.png'
     fig.savefig(target,dpi=220,bbox_inches='tight',facecolor='white');plt.close(fig)
     print('Figure saved:',target)
 
